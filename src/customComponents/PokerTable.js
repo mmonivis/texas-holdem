@@ -1,8 +1,10 @@
 import React, { Component } from 'react';
+import $ from 'jquery';
 import PokerHand from './PokerHand';
 
 import Deck from '../utilityClasses/Deck';
 import Buttons from './Buttons';
+import ThePot from './ThePot';
 
 var cards = new Deck()
 
@@ -12,9 +14,12 @@ class PokerTable extends Component{
 		this.state = {
 			dealersHand: ['deck','deck'],
 			playersHand: ['deck','deck'],
-			communityCards: ['deck','deck','deck','deck','deck']
+			communityCards: ['deck','deck','deck','deck','deck'],
+			wager: 0,
+			gameOver: false
 		}
 		this.prepDeck = this.prepDeck.bind(this)
+		this.playerBet = this.playerBet.bind(this)
 	}
 
 	prepDeck(){
@@ -35,6 +40,47 @@ class PokerTable extends Component{
 		})
 	}
 
+	playerBet(amount){
+		var newWager = this.state.wager + amount;
+		this.setState({
+			wager: newWager
+		})
+		this.draw()
+		this.checkHands(this.state.playersHand)
+	}
+
+	checkHands(hand){
+		//Using Flask
+		$.ajax({
+			method: "POST",
+			url: "http://localhost:5000/hand-checker",
+			data: {hand: hand},
+			success: (response)=>{
+				console.log(response)
+			}
+		})
+		// Using Express
+		$.ajax({
+			method: "POST",
+			url: "http://localhost:3000/hand-checker",
+			data: {hand: hand},
+			success: (response)=>{
+				console.log(response)
+			}
+		})
+	}
+
+	draw(){
+		var communityNewHand = this.state.communityCards;
+		communityNewHand.push(cards.deck.shift());
+		this.setState({
+			communityCards: communityNewHand
+		})
+		if(this.state.gameOver){
+			// Go find out who won
+		}
+	}
+
 	render(){
 		// this.prepDeck() // removed because we are updating setState in prepDeck function. Would continuously rerender...
 		// console.log(cards.deck)
@@ -42,10 +88,11 @@ class PokerTable extends Component{
 			<div className="col-sm-12 the-table">
 				{ /* <DealerHand /> */ }
 				{ /* <PlayerHand /> */ }
+				<ThePot wager={this.state.wager} />
 				<PokerHand cards={this.state.dealersHand} /> { /* The computer's hand */ }
 				<PokerHand cards={this.state.communityCards}/> { /* Community Cards */ }
 				<PokerHand cards={this.state.playersHand}/> { /* The player's hand */ }
-				<Buttons deal={this.prepDeck} />
+				<Buttons deal={this.prepDeck} bet={this.playerBet} />
 			</div>
 		)
 	}
